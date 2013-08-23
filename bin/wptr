@@ -1,0 +1,223 @@
+#!/usr/bin/env python
+"""Translate a word using Wikipedia's cross-wiki links"""
+
+
+__version__ = "1.0"
+
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    from BeautifulSoup import BeautifulSoup
+import gettext
+import locale
+from optparse import OptionParser
+import os
+import re
+import requests
+import sys
+import urllib
+
+
+# set up gettext for i18n
+_t = gettext.translation('wptr',
+                         localedir=os.path.join(
+                             os.path.dirname(os.path.dirname(__file__)),
+                             "share/locale"),
+                         fallback=True,
+                         languages=[locale.getdefaultlocale()[0]],
+                         codeset='UTF-8')
+_ = lambda s: _t.lgettext(s).decode('utf-8')
+
+
+# different possible output formats
+formats = {
+    "plain": {
+        "start": _(u"Translations for \u201C{term}\u201D ({lang})\n\n"),
+        "end": _(u"\nSource: {url}\n"),
+        "line": _(u"{lang} ({iso}):{filler} {item}\n"),
+    },
+    "console": {
+        "start": _(u"\u001B[33mTranslations for \u201C\u001B[32m{term}\u001B[33m\u201D ({lang})\u001B[0m\n\n"),
+        "end": _(u"\n\u001B[38;5;241mSource: {url}\u001B[0m\n"),
+        "line": _(u"{lang} \u001B[33m({iso})\u001B[0m:{filler} \u001B[32m{item}\u001B[0m\n"),
+    },
+    "csv": {
+        "start": u'"'+_(u'Language')+u'","'+_(u'ISO code')+u'","'+_(u'Translation')+u'"\n"'+_(u'source')+u'","{lang}","{term}"\n',
+        "end": u'',
+        "line": u'"{lang}","{iso}","{item}"\n',
+    },
+    "short": {
+        "start": u"",
+        "end": u"({url})\n",
+        "line": u"{iso} {item}\n",
+    },
+    "html": {
+        "start": u'<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+
+                 _(u'Translations of {term}')+u'</title></head><body><h1>'+
+                 _(u'Translations of {term}')+u'</h1><p>'+
+                 (_(u'Source: %s') % u'<a href="{url}">{url}</a>') + u'</p><dl>',
+        "end": u"</dl></body></html>",
+        "line": u'<dt>{lang} ({iso})</dt><dd><a href="{url}">{item}</a></dd>',
+    },
+    "json": {
+        "start": u'{{"src":"{url}","term":"{term}","lang":"{lang}","translations":{{',
+        "end": u'}}}}',
+        "line": u'"{iso}":"{item}",',
+        "last-line": u'"{iso}":"{item}"',
+    },
+}
+
+
+def get_html(term, lang="en"):
+    """Fetch the information from Wikipedia and return the plain markup"""
+
+    headers = {
+        #"User-Agent": "Mozilla/5.0 (Windows; U; Windows NT 6.0; de; rv:1.8.1.11) Gecko/20071127 Firefox/2.0.0.11"
+        "User-Agent": "Mozilla/5.0 wptr like Gecko, Firefox"
+    }
+    r = requests.get(get_url(term, lang),
+                     headers=headers)
+
+    return r.text
+
+
+def get_url(term, lang="en"):
+    """return Wikipedia URL for term"""
+    return 'http://%s.wikipedia.org/wiki/%s' % (lang,
+            urllib.quote(term.encode('utf-8')))
+
+
+def get_translations(term, lang="en"):
+    """get a list of translations for a term"""
+
+    r = []
+    soup = BeautifulSoup(get_html(term, lang))
+    if hasattr(soup, "find_all") and callable(soup.find_all):
+        links = soup.find_all(class_=re.compile("\\binterwiki-[a-z]+"))
+    else:
+        links = soup.findAll(attrs={"class": re.compile("\\binterwiki-[a-z]+")})
+
+    for link in links:
+        a = link.find('a')
+        if a:
+            url = a.get('href', '')
+            if url.startswith("//"):
+                url = "http:" + url
+            r.append({
+                "iso": a.get('hreflang', ''),
+                "item": a.get('title', ''),
+                "url": url,
+                "lang": unicode(a.string)})
+
+    return r
+
+
+def format_translations(term, data, fmt="plain", lang="en"):
+    """format the translation data"""
+
+    if fmt not in formats:
+        # double-check. For CLI this is controlled by Optparse already
+        raise KeyError("Format {} is unknown".format(fmt))
+
+    s = formats[fmt]["start"].format(term=term, lang=lang, url=get_url(term, lang))
+
+    # determine the label length for console output
+    maxlabel = 0
+    for tr in data:
+        l = len(tr["iso"]) + len(tr["lang"])
+        if l > maxlabel:
+            maxlabel = l
+
+    # main data loop
+    len_data = len(data) - 1
+    for i, tr in enumerate(data):
+        l = len(tr["iso"]) + len(tr["lang"])
+        tr["filler"] = " " * (maxlabel - l)
+        tr["i"] = i+1
+        cur = formats[fmt]["line"]
+        if i == 0 and "first-line" in formats[fmt]:
+            cur = formats[fmt]["first-line"]
+        elif i == len_data and "last-line" in formats[fmt]:
+            cur = formats[fmt]["last-line"]
+        s += cur.format(**tr)
+
+    s += formats[fmt]["end"].format(term=term, lang=lang, url=get_url(term, lang))
+
+    return s
+
+
+def cli():
+    """CLI interface"""
+
+    fmt = "plain"
+    if sys.stdout.isatty():
+        fmt = "console"
+
+    lang = locale.getdefaultlocale()[0]
+    if lang == "C":
+        lang = "en"
+    else:
+        lang = re.sub(r'^(?i)([a-z]+).*$', r'\1', lang).lower()
+
+    parser = OptionParser(
+      usage = _("Usage: %prog [options] term"),
+      version = "%%prog %s" % __version__,
+      description = _("""Query Wikipedia for translations of a term.""")
+    )
+    parser.add_option("-l", "--language",
+        action="store",
+        dest="lang",
+        default=lang,
+        metavar=_("LANGUAGE"),
+        help=_("set language the terms are in [default: %default]"),
+    )
+    parser.add_option("-f", "--format",
+        action="store",
+        default=fmt,
+        dest="fmt",
+        choices=formats.keys(),
+        help=_("format output (possible values are: %s)") % _(", ").join (formats.keys()),
+    )
+    parser.set_defaults(verbose=True)
+    parser.add_option("-q", "--quiet",
+        action="store_false",
+        dest="verbose",
+        help=_("be quiet (short for --format=short)"),
+    )
+    parser.add_option("--color",
+        default="auto",
+        dest="color",
+        choices=("auto", "always", "never"),
+        metavar=_("WHEN"),
+        help=_("colorize the output.  WHEN defaults to `auto' or can be `never' or `always'"),
+    )
+
+    (o, args) = parser.parse_args()
+
+    if not re.search(r'^(?i)[a-z]{2,3}$', o.lang):
+        parser.error(_("-l option requires a valid language identifier (like 'en' or 'de')."))
+
+    if o.fmt == "console" and o.color == "never":
+        o.fmt = "plain"
+    elif o.fmt == "plain" and o.color == "always":
+        o.fmt = "console"
+    if not o.verbose:
+        o.fmt = "short"
+
+    if len(args) < 1:
+        parser.error(_("no argument given for translation."))
+
+    args = map(lambda s: unicode(s, sys.stdin.encoding), args)
+
+    sys.stdout.write(
+        format_translations(
+            u' '.join(args),
+            get_translations(u' '.join(args), o.lang),
+            o.fmt,
+            o.lang
+        ).encode('utf-8'))
+
+
+if __name__ == '__main__':
+    cli()
