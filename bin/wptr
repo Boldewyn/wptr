@@ -23,11 +23,11 @@ import urllib
 _t = gettext.translation('wptr',
                          localedir=os.path.join(
                              os.path.dirname(os.path.dirname(__file__)),
-                             "share/locale"),
+                             "locale"),
                          fallback=True,
                          languages=[locale.getdefaultlocale()[0]],
                          codeset='UTF-8')
-_ = lambda s: _t.lgettext(s).decode('utf-8')
+_ = lambda s: _t.lgettext(s.encode('utf-8')).decode('utf-8')
 
 
 # different possible output formats
@@ -36,21 +36,25 @@ formats = {
         "start": _(u"Translations for \u201C{term}\u201D ({lang})\n\n"),
         "end": _(u"\nSource: {url}\n"),
         "line": _(u"{lang} ({iso}):{filler} {item}\n"),
+        "error": _(u"Couldn\u2019t find a translation for \u201C{term}\u201D ({lang})\n"),
     },
     "console": {
         "start": _(u"\u001B[33mTranslations for \u201C\u001B[32m{term}\u001B[33m\u201D ({lang})\u001B[0m\n\n"),
         "end": _(u"\n\u001B[38;5;241mSource: {url}\u001B[0m\n"),
         "line": _(u"{lang} \u001B[33m({iso})\u001B[0m:{filler} \u001B[32m{item}\u001B[0m\n"),
+        "error": _(u"\u001B[31mCouldn\u2019t find a translation for \u201C{term}\u201D ({lang})\u001B[0m\n"),
     },
     "csv": {
         "start": u'"'+_(u'Language')+u'","'+_(u'ISO code')+u'","'+_(u'Translation')+u'"\n"'+_(u'source')+u'","{lang}","{term}"\n',
         "end": u'',
         "line": u'"{lang}","{iso}","{item}"\n',
+        "error": _(u"Couldn\u2019t find a translation for \u201C{term}\u201D ({lang}),\n"),
     },
     "short": {
         "start": u"",
         "end": u"({url})\n",
         "line": u"{iso} {item}\n",
+        "error": u"{code}\n",
     },
     "html": {
         "start": u'<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+
@@ -59,12 +63,17 @@ formats = {
                  (_(u'Source: %s') % u'<a href="{url}">{url}</a>') + u'</p><dl>',
         "end": u"</dl></body></html>",
         "line": u'<dt>{lang} ({iso})</dt><dd><a href="{url}">{item}</a></dd>',
+        "error": u'<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+
+                 _(u'Translations of {term}')+u'</title></head><body><p>'+
+                 _(u"Couldn\u2019t find a translation for \u201C{term}\u201D ({lang}),\n") +
+                u"</p></body></html>",
     },
     "json": {
         "start": u'{{"src":"{url}","term":"{term}","lang":"{lang}","translations":{{',
         "end": u'}}}}',
         "line": u'"{iso}":"{item}",',
         "last-line": u'"{iso}":"{item}"',
+        "error": u'null',
     },
 }
 
@@ -79,6 +88,9 @@ def get_html(term, lang="en"):
     r = requests.get(get_url(term, lang),
                      headers=headers)
 
+    if r.status_code != 200:
+        raise ValueError(r.status_code)
+
     return r.text
 
 
@@ -92,7 +104,10 @@ def get_translations(term, lang="en"):
     """get a list of translations for a term"""
 
     r = []
-    soup = BeautifulSoup(get_html(term, lang))
+    try:
+        soup = BeautifulSoup(get_html(term, lang))
+    except ValueError as e:
+        return e
     if hasattr(soup, "find_all") and callable(soup.find_all):
         links = soup.find_all(class_=re.compile("\\binterwiki-[a-z]+"))
     else:
@@ -120,29 +135,33 @@ def format_translations(term, data, fmt="plain", lang="en"):
         # double-check. For CLI this is controlled by Optparse already
         raise KeyError("Format {} is unknown".format(fmt))
 
-    s = formats[fmt]["start"].format(term=term, lang=lang, url=get_url(term, lang))
+    if isinstance(data, ValueError):
+        s = formats[fmt]["error"].format(code=data.message, term=term, lang=lang)
 
-    # determine the label length for console output
-    maxlabel = 0
-    for tr in data:
-        l = len(tr["iso"]) + len(tr["lang"])
-        if l > maxlabel:
-            maxlabel = l
+    else:
+        s = formats[fmt]["start"].format(term=term, lang=lang, url=get_url(term, lang))
 
-    # main data loop
-    len_data = len(data) - 1
-    for i, tr in enumerate(data):
-        l = len(tr["iso"]) + len(tr["lang"])
-        tr["filler"] = " " * (maxlabel - l)
-        tr["i"] = i+1
-        cur = formats[fmt]["line"]
-        if i == 0 and "first-line" in formats[fmt]:
-            cur = formats[fmt]["first-line"]
-        elif i == len_data and "last-line" in formats[fmt]:
-            cur = formats[fmt]["last-line"]
-        s += cur.format(**tr)
+        # determine the label length for console output
+        maxlabel = 0
+        for tr in data:
+            l = len(tr["iso"]) + len(tr["lang"])
+            if l > maxlabel:
+                maxlabel = l
 
-    s += formats[fmt]["end"].format(term=term, lang=lang, url=get_url(term, lang))
+        # main data loop
+        len_data = len(data) - 1
+        for i, tr in enumerate(data):
+            l = len(tr["iso"]) + len(tr["lang"])
+            tr["filler"] = " " * (maxlabel - l)
+            tr["i"] = i+1
+            cur = formats[fmt]["line"]
+            if i == 0 and "first-line" in formats[fmt]:
+                cur = formats[fmt]["first-line"]
+            elif i == len_data and "last-line" in formats[fmt]:
+                cur = formats[fmt]["last-line"]
+            s += cur.format(**tr)
+
+        s += formats[fmt]["end"].format(term=term, lang=lang, url=get_url(term, lang))
 
     return s
 

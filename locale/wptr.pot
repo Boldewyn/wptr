@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-08-23 23:05+0200\n"
+"POT-Creation-Date: 2013-08-28 22:59+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -33,90 +33,102 @@ msgstr ""
 msgid "{lang} ({iso}):{filler} {item}\n"
 msgstr ""
 
-#: bin/wptr:41
+#: bin/wptr:39
+msgid "Couldn’t find a translation for “{term}” ({lang})\n"
+msgstr ""
+
+#: bin/wptr:42
 msgid ""
 "[33mTranslations for “[32m{term}[33m” ({lang})[0m\n"
 "\n"
 msgstr ""
 
-#: bin/wptr:42
+#: bin/wptr:43
 msgid ""
 "\n"
 "[38;5;241mSource: {url}[0m\n"
 msgstr ""
 
-#: bin/wptr:43
+#: bin/wptr:44
 msgid "{lang} [33m({iso})[0m:{filler} [32m{item}[0m\n"
 msgstr ""
 
-#: bin/wptr:46
+#: bin/wptr:45
+msgid "[31mCouldn’t find a translation for “{term}” ({lang})[0m\n"
+msgstr ""
+
+#: bin/wptr:48
 msgid "Language"
 msgstr ""
 
-#: bin/wptr:46
+#: bin/wptr:48
 msgid "ISO code"
 msgstr ""
 
-#: bin/wptr:46
+#: bin/wptr:48
 msgid "Translation"
 msgstr ""
 
-#: bin/wptr:46
+#: bin/wptr:48
 msgid "source"
 msgstr ""
 
-#: bin/wptr:57 bin/wptr:58
+#: bin/wptr:51 bin/wptr:68
+msgid "Couldn’t find a translation for “{term}” ({lang}),\n"
+msgstr ""
+
+#: bin/wptr:61 bin/wptr:62 bin/wptr:67
 msgid "Translations of {term}"
 msgstr ""
 
-#: bin/wptr:59
+#: bin/wptr:63
 #, python-format
 msgid "Source: %s"
 msgstr ""
 
-#: bin/wptr:164
+#: bin/wptr:183
 msgid "Usage: %prog [options] term"
 msgstr ""
 
-#: bin/wptr:166
+#: bin/wptr:185
 msgid "Query Wikipedia for translations of a term."
 msgstr ""
 
-#: bin/wptr:172
+#: bin/wptr:191
 msgid "LANGUAGE"
 msgstr ""
 
-#: bin/wptr:173
+#: bin/wptr:192
 #, python-format
 msgid "set language the terms are in [default: %default]"
 msgstr ""
 
-#: bin/wptr:180
+#: bin/wptr:199
 #, python-format
 msgid "format output (possible values are: %s)"
 msgstr ""
 
-#: bin/wptr:180
+#: bin/wptr:199
 msgid ", "
 msgstr ""
 
-#: bin/wptr:186
+#: bin/wptr:205
 msgid "be quiet (short for --format=short)"
 msgstr ""
 
-#: bin/wptr:192
+#: bin/wptr:211
 msgid "WHEN"
 msgstr ""
 
-#: bin/wptr:193
+#: bin/wptr:212
 msgid ""
 "colorize the output.  WHEN defaults to `auto' or can be `never' or `always'"
 msgstr ""
 
-#: bin/wptr:199
+#: bin/wptr:218
 msgid "-l option requires a valid language identifier (like 'en' or 'de')."
 msgstr ""
 
-#: bin/wptr:209
+#: bin/wptr:228
 msgid "no argument given for translation."
 msgstr ""
