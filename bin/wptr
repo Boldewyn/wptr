@@ -180,42 +180,42 @@ def cli():
         lang = re.sub(r'^(?i)([a-z]+).*$', r'\1', lang).lower()
 
     parser = OptionParser(
-      usage = _("Usage: %prog [options] term"),
+      usage = _(u"%prog [options] term"),
       version = "%%prog %s" % __version__,
-      description = _("""Query Wikipedia for translations of a term.""")
+      description = _(u"Query Wikipedia for translations of a term.")
     )
     parser.add_option("-l", "--language",
         action="store",
         dest="lang",
         default=lang,
-        metavar=_("LANGUAGE"),
-        help=_("set language the terms are in [default: %default]"),
+        metavar=_(u"LANGUAGE"),
+        help=_(u"set language the terms are in [default: %default]"),
     )
     parser.add_option("-f", "--format",
         action="store",
         default=fmt,
         dest="fmt",
         choices=formats.keys(),
-        help=_("format output (possible values are: %s)") % _(", ").join (formats.keys()),
+        help=_(u"format output (possible values are: %s)") % _(u", ").join (formats.keys()),
     )
     parser.set_defaults(verbose=True)
     parser.add_option("-q", "--quiet",
         action="store_false",
         dest="verbose",
-        help=_("be quiet (short for --format=short)"),
+        help=_(u"be quiet (short for --format=short)"),
     )
     parser.add_option("--color",
         default="auto",
         dest="color",
         choices=("auto", "always", "never"),
-        metavar=_("WHEN"),
-        help=_("colorize the output.  WHEN defaults to `auto' or can be `never' or `always'"),
+        metavar=_(u"WHEN"),
+        help=_(u"colorize the output.  WHEN defaults to \u2018auto\u2019 or can be \u2018never\u2019 or \u2018always\u2019"),
     )
 
     (o, args) = parser.parse_args()
 
     if not re.search(r'^(?i)[a-z]{2,3}$', o.lang):
-        parser.error(_("-l option requires a valid language identifier (like 'en' or 'de')."))
+        parser.error(_(u"-l option requires a valid language identifier (like \u2018en\u2019 or \u2018de\u2019)."))
 
     if o.fmt == "console" and o.color == "never":
         o.fmt = "plain"
@@ -225,7 +225,7 @@ def cli():
         o.fmt = "short"
 
     if len(args) < 1:
-        parser.error(_("no argument given for translation."))
+        parser.error(_(u"no argument given for translation.").encode("utf-8"))
 
     args = map(lambda s: unicode(s, sys.stdin.encoding), args)
 
