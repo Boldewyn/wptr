@@ -35,13 +35,13 @@ formats = {
     "plain": {
         "start": _(u"Translations for \u201C{term}\u201D ({lang})\n\n"),
         "end": _(u"\nSource: {url}\n"),
-        "line": _(u"{lang} ({iso}):{filler} {item}\n"),
+        "line": _(u"{lang} ({nlang}, {iso}):{filler} {item}\n"),
         "error": _(u"Couldn\u2019t find a translation for \u201C{term}\u201D ({lang})\n"),
     },
     "console": {
         "start": _(u"\u001B[33mTranslations for \u201C\u001B[32m{term}\u001B[33m\u201D ({lang})\u001B[0m\n\n"),
         "end": _(u"\n\u001B[38;5;241mSource: {url}\u001B[0m\n"),
-        "line": _(u"{lang} \u001B[33m({iso})\u001B[0m:{filler} \u001B[32m{item}\u001B[0m\n"),
+        "line": _(u"{lang} \u001B[33m({nlang}, {iso})\u001B[0m:{filler} \u001B[32m{item}\u001B[0m\n"),
         "error": _(u"\u001B[31mCouldn\u2019t find a translation for \u201C{term}\u201D ({lang})\u001B[0m\n"),
     },
     "csv": {
@@ -62,7 +62,7 @@ formats = {
                  _(u'Translations of {term}')+u'</h1><p>'+
                  (_(u'Source: %s') % u'<a href="{url}">{url}</a>') + u'</p><dl>',
         "end": u"</dl></body></html>",
-        "line": u'<dt>{lang} ({iso})</dt><dd><a href="{url}">{item}</a></dd>',
+        "line": u'<dt>{lang} ({nlang}, {iso})</dt><dd><a href="{url}">{item}</a></dd>',
         "error": u'<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+
                  _(u'Translations of {term}')+u'</title></head><body><p>'+
                  _(u"Couldn\u2019t find a translation for \u201C{term}\u201D ({lang}),\n") +
@@ -103,25 +103,31 @@ def get_url(term, lang="en"):
 def get_translations(term, lang="en"):
     """get a list of translations for a term"""
 
-    r = []
     try:
         soup = BeautifulSoup(get_html(term, lang))
     except ValueError as e:
         return e
+
     if hasattr(soup, "find_all") and callable(soup.find_all):
         links = soup.find_all(class_=re.compile("\\binterwiki-[a-z]+"))
     else:
         links = soup.findAll(attrs={"class": re.compile("\\binterwiki-[a-z]+")})
 
+    r = []
     for link in links:
         a = link.find('a')
         if a:
             url = a.get('href', '')
             if url.startswith("//"):
                 url = "http:" + url
+            title = a.get('title', '')
+            nlang = unicode(a.string)
+            if u" \u2013 " in title:
+                (title, nlang) = title.split(u" \u2013 ", 1)
             r.append({
                 "iso": a.get('hreflang', ''),
-                "item": a.get('title', ''),
+                "item": title,
+                "nlang": nlang,
                 "url": url,
                 "lang": unicode(a.string)})
 
@@ -144,14 +150,14 @@ def format_translations(term, data, fmt="plain", lang="en"):
         # determine the label length for console output
         maxlabel = 0
         for tr in data:
-            l = len(tr["iso"]) + len(tr["lang"])
+            l = len(tr["iso"]) + len(tr["lang"]) + len(tr["nlang"])
             if l > maxlabel:
                 maxlabel = l
 
         # main data loop
         len_data = len(data) - 1
         for i, tr in enumerate(data):
-            l = len(tr["iso"]) + len(tr["lang"])
+            l = len(tr["iso"]) + len(tr["lang"]) + len(tr["nlang"])
             tr["filler"] = " " * (maxlabel - l)
             tr["i"] = i+1
             cur = formats[fmt]["line"]
