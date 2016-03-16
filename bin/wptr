@@ -195,7 +195,7 @@ def cli():
         dest="lang",
         default=lang,
         metavar=_(u"LANGUAGE"),
-        help=_(u"set language the terms are in [default: %default]"),
+        help=_(u"set language the terms are in [default: %default]. You can also prefix the search term with the language, e. g., \u2018en:Mirror\u2019"),
     )
     parser.add_option("-f", "--format",
         action="store",
