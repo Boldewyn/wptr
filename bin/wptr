@@ -99,7 +99,7 @@ def get_html(term, lang="en"):
 
 def get_url(term, lang="en"):
     """return Wikipedia URL for term"""
-    return f'http://{lang}.wikipedia.org/wiki/{urllib.parse.quote(term)}'
+    return f'https://{lang}.wikipedia.org/wiki/{urllib.parse.quote(term)}'
 
 
 def get_translations(term, lang="en"):
@@ -121,7 +121,7 @@ def get_translations(term, lang="en"):
         if anchor:
             url = anchor.get('href', '')
             if url.startswith("//"):
-                url = "http:" + url
+                url = "https:" + url
             title = anchor.get('title', '')
             nlang = anchor.string
             if " \u2013 " in title:
