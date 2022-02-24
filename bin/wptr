@@ -4,19 +4,18 @@
 # pylint: disable=line-too-long
 
 
-__version__ = "2.0.0"
+__version__ = "3.0.0"
 
 
-import gettext
-import locale
 from argparse import ArgumentParser
+import gettext
+import json
+import locale
 import os
 import re
 import sys
 import urllib.parse
-
-from bs4 import BeautifulSoup
-import requests
+import urllib.request
 
 
 # set up gettext for i18n
@@ -82,19 +81,47 @@ formats = {
 }
 
 
-def get_html(term, lang="en"):
+def get_sparql(term, lang):
+    """get the SPARQL query that is used to fetch the data"""
+
+    return f'''
+SELECT DISTINCT ?lang ?langItemLabel ?langNativeLabel ?name WHERE {{
+
+  ?sourceArticle schema:about ?item;
+                 schema:isPartOf [ wikibase:wikiGroup "wikipedia" ];
+                 schema:name "{term}"@{lang}.
+
+  ?targetArticle schema:about ?item;
+                 schema:inLanguage ?lang;
+                 schema:name ?name;
+                 schema:isPartOf [ wikibase:wikiGroup "wikipedia" ].
+
+  FILTER(?lang not in ('{lang}')) .
+  FILTER (!CONTAINS(?name, ':')) .
+
+  ?langItem wdt:P31 wd:Q34770 ; wdt:P424 ?lang ; wdt:P1705 ?langNativeLabel .
+
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "{lang}". }}
+}}
+ORDER BY ?lang
+                       '''
+
+
+def get_json(term, lang):
     """Fetch the information from Wikipedia and return the plain markup"""
 
     headers = {
         "User-Agent": "Mozilla/5.0 wptr like Gecko, Firefox"
     }
-    req = requests.get(get_url(term, lang),
-                     headers=headers)
+    req = urllib.request.Request('https://query.wikidata.org/sparql?format=json&query=' +
+                                 urllib.parse.quote(get_sparql(term, lang)),
+                                 headers=headers)
+    response = urllib.request.urlopen(req)
 
-    if req.status_code != 200:
-        raise ValueError(req.status_code)
+    if response.status != 200:
+        raise ValueError(response.status)
 
-    return req.text
+    return json.loads(response.read().decode('UTF-8'))['results']['bindings']
 
 
 def get_url(term, lang="en"):
@@ -106,34 +133,24 @@ def get_translations(term, lang="en"):
     """get a list of translations for a term"""
 
     try:
-        soup = BeautifulSoup(get_html(term, lang), features='lxml')
-    except ValueError as err:
+        data = get_json(term, lang)
+    except (KeyError, ValueError) as err:
         return err
 
-    if hasattr(soup, "find_all") and callable(soup.find_all):
-        links = soup.find_all(class_=re.compile("\\binterwiki-[a-z]+"))
-    else:
-        links = soup.findAll(attrs={"class": re.compile("\\binterwiki-[a-z]+")})
+    ret = {}
+    for item in data:
+        iso = item["lang"]["value"]
+        title = item["name"]["value"]
+        url = f'https://{iso}.wikipedia.org/wiki/{urllib.parse.quote(title)}'
+        ret[iso] = {
+            "iso": iso,
+            "item": title,
+            "nlang": item["langItemLabel"]["value"],
+            "url": url,
+            "lang": item["langNativeLabel"]["value"],
+        }
 
-    ret = []
-    for link in links:
-        anchor = link.find('a')
-        if anchor:
-            url = anchor.get('href', '')
-            if url.startswith("//"):
-                url = "https:" + url
-            title = anchor.get('title', '')
-            nlang = anchor.string
-            if " \u2013 " in title:
-                (title, nlang) = title.split(" \u2013 ", 1)
-            ret.append({
-                "iso": anchor.get('hreflang', ''),
-                "item": title,
-                "nlang": nlang,
-                "url": url,
-                "lang": anchor.string})
-
-    return ret
+    return ret.values()
 
 
 def format_translations(term, data, fmt="plain", lang="en"):
@@ -143,7 +160,7 @@ def format_translations(term, data, fmt="plain", lang="en"):
         # double-check. For CLI this is controlled by Optparse already
         raise KeyError(f"Format {fmt} is unknown")
 
-    if isinstance(data, ValueError):
+    if isinstance(data, (KeyError, ValueError)):
         ret = formats[fmt]["error"].format(code=data.message, term=term, lang=lang)
 
     else:
@@ -181,11 +198,9 @@ def cli():
     if sys.stdout.isatty():
         fmt = "console"
 
-    lang = locale.getdefaultlocale()[0]
-    if lang == "C":
+    lang = re.sub('[^a-zA-Z].*', '', locale.getdefaultlocale()[0]).lower()
+    if not lang or lang == "C":
         lang = "en"
-    else:
-        lang = re.sub(r'^([a-z]+).*$', r'\1', lang, re.I).lower()
 
     parser = ArgumentParser(
       usage = _("%(prog)s [options] term"),
@@ -222,6 +237,12 @@ def cli():
         metavar=_("WHEN"),
         help=_("colorize the output.  WHEN defaults to \u2018auto\u2019 or can be \u2018never\u2019 or \u2018always\u2019"),
     )
+    parser.set_defaults(show_query=False)
+    parser.add_argument("--show-query",
+        dest="show_query",
+        action="store_true",
+        help=_("print the SPARQL query that would be used and exit"),
+    )
     parser.add_argument('term',
         nargs='*',
         help=_("the term to translate")
@@ -241,6 +262,10 @@ def cli():
 
     if len(opts.term) < 1:
         parser.error(_("no argument given for translation."))
+
+    if opts.show_query:
+        sys.stdout.write(get_sparql(' '.join(opts.term), opts.lang)+'\n')
+        sys.exit(0)
 
     sys.stdout.write(
         format_translations(
