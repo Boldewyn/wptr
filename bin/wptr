@@ -81,8 +81,13 @@ formats = {
 }
 
 
-def get_sparql(term, lang):
+def get_sparql(term, lang, to):
     """get the SPARQL query that is used to fetch the data"""
+
+    toFilter = ''
+    if to:
+        toLangs = ','.join([f"'{toLang}'" for toLang in to])
+        toFilter = f'\n  FILTER(?lang in ({toLangs})) .'
 
     return f'''
 SELECT DISTINCT ?lang ?langItemLabel ?langNativeLabel ?name WHERE {{
@@ -96,7 +101,7 @@ SELECT DISTINCT ?lang ?langItemLabel ?langNativeLabel ?name WHERE {{
                  schema:name ?name;
                  schema:isPartOf [ wikibase:wikiGroup "wikipedia" ].
 
-  FILTER(?lang not in ('{lang}')) .
+  FILTER(?lang not in ('{lang}')) .{toFilter}
   FILTER (!CONTAINS(?name, ':')) .
 
   ?langItem wdt:P31 wd:Q34770 ; wdt:P424 ?lang ; wdt:P1705 ?langNativeLabel .
@@ -107,14 +112,14 @@ ORDER BY ?lang
                        '''
 
 
-def get_json(term, lang):
+def get_json(term, lang, to):
     """Fetch the information from Wikipedia and return the plain markup"""
 
     headers = {
         "User-Agent": "Mozilla/5.0 wptr like Gecko, Firefox"
     }
     req = urllib.request.Request('https://query.wikidata.org/sparql?format=json&query=' +
-                                 urllib.parse.quote(get_sparql(term, lang)),
+                                 urllib.parse.quote(get_sparql(term, lang, to)),
                                  headers=headers)
     response = urllib.request.urlopen(req)
 
@@ -129,11 +134,11 @@ def get_url(term, lang="en"):
     return f'https://{lang}.wikipedia.org/wiki/{urllib.parse.quote(term)}'
 
 
-def get_translations(term, lang="en"):
+def get_translations(term, lang, to):
     """get a list of translations for a term"""
 
     try:
-        data = get_json(term, lang)
+        data = get_json(term, lang, to)
     except (KeyError, ValueError) as err:
         return err
 
@@ -210,13 +215,17 @@ def cli():
         action='version',
         version=f"%(prog)s {__version__}"
     )
-    parser.add_argument("-l", "--language",
+    parser.add_argument("-l", "--language", "--from",
         action="store",
         dest="lang",
         default=lang,
         metavar=_("LANGUAGE"),
         help=_("set language the terms are in [default: %(default)s]. You can also prefix the search term with the language, e. g., \u2018en:Mirror\u2019"),
     )
+    parser.add_argument('-t', '--to',
+        default=[],
+        action='append',
+        help=_('translate to this language. Can be used more than once or with a comma-separated list, e.g. --to de,fr,es'))
     parser.add_argument("-f", "--format",
         action="store",
         default=fmt,
@@ -263,14 +272,21 @@ def cli():
     if len(opts.term) < 1:
         parser.error(_("no argument given for translation."))
 
+    to = set()
+    if len(opts.to):
+        for item in opts.to:
+            to = to.union([toLang.strip() for toLang in item.split(',')])
+        # safe-guard against translating to original language
+        to.discard(opts.lang)
+
     if opts.show_query:
-        sys.stdout.write(get_sparql(' '.join(opts.term), opts.lang)+'\n')
+        sys.stdout.write(get_sparql(' '.join(opts.term), opts.lang, to)+'\n')
         sys.exit(0)
 
     sys.stdout.write(
         format_translations(
             ' '.join(opts.term),
-            get_translations(' '.join(opts.term), opts.lang),
+            get_translations(' '.join(opts.term), opts.lang, to),
             opts.fmt,
             opts.lang
         ))
