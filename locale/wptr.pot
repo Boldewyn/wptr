@@ -8,56 +8,69 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-08-30 21:47+0200\n"
+"POT-Creation-Date: 2022-02-24 17:49+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: bin/wptr:36
+#: bin/wptr:34
+#, python-brace-format
 msgid ""
-"Translations for “{term}” ({lang})\n"
+"Translations for \\u201C{term}\\u201D ({lang})\n"
 "\n"
 msgstr ""
 
-#: bin/wptr:37
+#: bin/wptr:35
+#, python-brace-format
 msgid ""
 "\n"
 "Source: {url}\n"
 msgstr ""
 
-#: bin/wptr:38
-msgid "{lang} ({iso}):{filler} {item}\n"
+#: bin/wptr:36
+#, python-brace-format
+msgid "{lang} ({nlang}, {iso}):{filler} {item}\n"
 msgstr ""
 
-#: bin/wptr:39
-msgid "Couldn’t find a translation for “{term}” ({lang})\n"
+#: bin/wptr:37
+#, python-brace-format
+msgid "Couldn\\u2019t find a translation for \\u201C{term}\\u201D ({lang})\n"
+msgstr ""
+
+#: bin/wptr:40
+#, python-brace-format
+msgid ""
+"\\u001B[33mTranslations for \\u201C\\u001B[32m{term}\\u001B[33m\\u201D "
+"({lang})\\u001B[0m\n"
+"\n"
+msgstr ""
+
+#: bin/wptr:41
+#, python-brace-format
+msgid ""
+"\n"
+"\\u001B[38;5;241mSource: {url}\\u001B[0m\n"
 msgstr ""
 
 #: bin/wptr:42
+#, python-brace-format
 msgid ""
-"[33mTranslations for “[32m{term}[33m” ({lang})[0m\n"
-"\n"
+"{lang} \\u001B[33m({nlang}, {iso})\\u001B[0m:{filler} "
+"\\u001B[32m{item}\\u001B[0m\n"
 msgstr ""
 
 #: bin/wptr:43
+#, python-brace-format
 msgid ""
-"\n"
-"[38;5;241mSource: {url}[0m\n"
+"\\u001B[31mCouldn\\u2019t find a translation for \\u201C{term}\\u201D "
+"({lang})\\u001B[0m\n"
 msgstr ""
 
-#: bin/wptr:44
-msgid "{lang} [33m({iso})[0m:{filler} [32m{item}[0m\n"
-msgstr ""
-
-#: bin/wptr:45
-msgid "[31mCouldn’t find a translation for “{term}” ({lang})[0m\n"
-msgstr ""
-
-#: bin/wptr:48
+#: bin/wptr:47
 msgid "Language"
 msgstr ""
 
@@ -65,70 +78,92 @@ msgstr ""
 msgid "ISO code"
 msgstr ""
 
-#: bin/wptr:48
+#: bin/wptr:49
 msgid "Translation"
 msgstr ""
 
-#: bin/wptr:48
+#: bin/wptr:50
 msgid "source"
 msgstr ""
 
-#: bin/wptr:51 bin/wptr:68
-msgid "Couldn’t find a translation for “{term}” ({lang}),\n"
+#: bin/wptr:53 bin/wptr:71
+#, python-brace-format
+msgid "Couldn\\u2019t find a translation for \\u201C{term}\\u201D ({lang}),\n"
 msgstr ""
 
-#: bin/wptr:61 bin/wptr:62 bin/wptr:67
+#: bin/wptr:63 bin/wptr:64 bin/wptr:70
+#, python-brace-format
 msgid "Translations of {term}"
 msgstr ""
 
-#: bin/wptr:63
+#: bin/wptr:66
 #, python-format
 msgid "Source: %s"
 msgstr ""
 
-#: bin/wptr:183
-msgid "%prog [options] term"
+#: bin/wptr:211
+#, python-format
+msgid "%(prog)s [options] term"
 msgstr ""
 
-#: bin/wptr:185
+#: bin/wptr:212
 msgid "Query Wikipedia for translations of a term."
 msgstr ""
 
-#: bin/wptr:191
+#: bin/wptr:222
 msgid "LANGUAGE"
 msgstr ""
 
-#: bin/wptr:192
+#: bin/wptr:223
 #, python-format
-msgid "set language the terms are in [default: %default]"
+msgid ""
+"set language the terms are in [default: %(default)s]. You can also prefix "
+"the search term with the language, e. g., \\u2018en:Mirror\\u2019"
 msgstr ""
 
-#: bin/wptr:199
+#: bin/wptr:228
+msgid ""
+"translate to this language. Can be used more than once or with a comma-"
+"separated list, e.g. --to de,fr,es"
+msgstr ""
+
+#: bin/wptr:234
 #, python-format
 msgid "format output (possible values are: %s)"
 msgstr ""
 
-#: bin/wptr:199
+#: bin/wptr:234
 msgid ", "
 msgstr ""
 
-#: bin/wptr:205
+#: bin/wptr:240
 msgid "be quiet (short for --format=short)"
 msgstr ""
 
-#: bin/wptr:211
+#: bin/wptr:246
 msgid "WHEN"
 msgstr ""
 
-#: bin/wptr:212
+#: bin/wptr:247
 msgid ""
-"colorize the output.  WHEN defaults to ‘auto’ or can be ‘never’ or ‘always’"
+"colorize the output.  WHEN defaults to \\u2018auto\\u2019 or can be "
+"\\u2018never\\u2019 or \\u2018always\\u2019"
 msgstr ""
 
-#: bin/wptr:218
-msgid "-l option requires a valid language identifier (like ‘en’ or ‘de’)."
+#: bin/wptr:253
+msgid "print the SPARQL query that would be used and exit"
 msgstr ""
 
-#: bin/wptr:228
+#: bin/wptr:257
+msgid "the term to translate"
+msgstr ""
+
+#: bin/wptr:263
+msgid ""
+"-l option requires a valid language identifier (like \\u2018en\\u2019 or "
+"\\u2018de\\u2019)."
+msgstr ""
+
+#: bin/wptr:273
 msgid "no argument given for translation."
 msgstr ""
